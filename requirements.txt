@@ -1,17 +1,9 @@
 # Dependencias de Python para el proyecto Gestor de Pedidos
 
-# No hay dependencias externas requeridas por ahora
-# El proyecto usa bibliotecas estándar de Python:
-# - sqlite3 (base de datos)
-# - tkinter (GUI)
-# - hashlib (seguridad)
-# - dataclasses (modelos)
-#
-# Para agregar interfaces gráficas avanzadas en el futuro:
-# tkinter (incluido en Python por defecto)
-# PySimpleGUI (alternativa simple)
-# PyQt5 (opción más profesional)
-#
-# Descomenta si quieres instalar dependencias adicionales:
-# PyQt5==5.15.0
-# python-dotenv==0.19.0
+# GUI Moderna
+PyQt6==6.6.1
+PyQt6-Qt6==6.6.1
+PyQt6-sip==13.6.0
+
+# Utilidades
+python-dotenv==0.19.0

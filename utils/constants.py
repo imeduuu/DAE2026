@@ -2,9 +2,24 @@
 Constantes de la aplicación
 """
 
-# Roles de usuario
-ROLE_CLIENT = "cliente"
-ROLE_ADMIN = "administrador"
+# Roles de usuario (3 tipos)
+ROLE_ADMIN = "administrador"      # Acceso total, ve todos los usuarios
+ROLE_MANAGER = "gerente"           # Acceso intermedio, puede gestionar pedidos
+ROLE_CLIENT = "cliente"            # Acceso limitado, solo ve sus datos
+
+# Diccionario de roles con descripciones
+ROLES = {
+    ROLE_ADMIN: "Administrador",
+    ROLE_MANAGER: "Gerente",
+    ROLE_CLIENT: "Cliente"
+}
+
+# Jerarquía de permisos
+ROLE_HIERARCHY = {
+    ROLE_ADMIN: 3,      # Máximo nivel
+    ROLE_MANAGER: 2,    # Nivel intermedio
+    ROLE_CLIENT: 1      # Nivel mínimo
+}
 
 # Estados de pedido
 ORDER_STATUS_PENDING = "pendiente"

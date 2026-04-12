@@ -1,21 +1,63 @@
 """
-Aplicación principal
-Punto de entrada de la aplicación
+Aplicación principal - Gestor de Pedidos
+Punto de entrada único de la aplicación
+Soporta modo GUI (PyQt6) y modo CLI (consola)
 """
 import sys
-from mediator.app_mediator import AppMediator
-from database.models import User
-from utils.constants import ROLE_ADMIN, ROLE_CLIENT
+import os
+
+# Agregar el directorio raíz al path para imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-def main():
-    """Función principal"""
+def run_gui():
+    """Ejecuta la aplicación en modo GUI"""
+    try:
+        from PyQt6.QtWidgets import QApplication
+        from mediator.app_mediator import AppMediator
+        from gui.main_window import MainWindow
+        from gui.styles import DARK_STYLESHEET
+        
+        print("🎨 Iniciando interfaz gráfica...")
+        
+        # Inicializar aplicación PyQt
+        app = QApplication(sys.argv)
+        
+        # Aplicar estilos globales
+        app.setStyle('Fusion')
+        app.setStyleSheet(DARK_STYLESHEET)
+        
+        # Inicializar mediador
+        mediator = AppMediator()
+        
+        # Crear y mostrar ventana principal
+        window = MainWindow(mediator)
+        
+        sys.exit(app.exec())
+    
+    except ImportError as e:
+        print(f"⚠️  PyQt6 no está instalado: {e}")
+        print("Instala con: pip install PyQt6==6.6.1")
+        print("\nFallando a modo CLI...")
+        run_cli()
+    except Exception as e:
+        print(f"❌ Error al iniciar GUI: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+def run_cli():
+    """Ejecuta la aplicación en modo consola (CLI)"""
+    from mediator.app_mediator import AppMediator
+    from utils.constants import ROLE_ADMIN, ROLE_CLIENT
+    
     print("=" * 60)
-    print("Gestor de Pedidos - Inicialización")
+    print("Gestor de Pedidos - Modo Consola")
     print("=" * 60)
     
     try:
-        # Inicializar mediador (configura la BD y todas las capas)
+        # Inicializar mediador
         mediator = AppMediator()
         print("✓ Aplicación inicializada correctamente\n")
         
@@ -30,11 +72,11 @@ def main():
             opcion = input("\nSeleccione una opción: ").strip()
             
             if opcion == "1":
-                register_user(mediator)
+                register_user_cli(mediator)
             elif opcion == "2":
-                login_user(mediator)
+                login_user_cli(mediator)
             elif opcion == "3":
-                list_users(mediator)
+                list_users_cli(mediator)
             elif opcion == "4":
                 print("¡Hasta luego!")
                 break
@@ -46,8 +88,8 @@ def main():
         sys.exit(1)
 
 
-def register_user(mediator: AppMediator):
-    """Registra un nuevo usuario"""
+def register_user_cli(mediator):
+    """Registra un nuevo usuario en modo CLI"""
     print("\n--- REGISTRO DE USUARIO ---")
     
     username = input("Nombre de usuario: ").strip()
@@ -60,6 +102,7 @@ def register_user(mediator: AppMediator):
     print("2. Administrador")
     rol_opcion = input("Seleccione (1-2): ").strip()
     
+    from utils.constants import ROLE_ADMIN, ROLE_CLIENT
     role = ROLE_ADMIN if rol_opcion == "2" else ROLE_CLIENT
     
     # Registrar
@@ -77,8 +120,8 @@ def register_user(mediator: AppMediator):
         print(f"❌ {message}")
 
 
-def login_user(mediator: AppMediator):
-    """Inicia sesión con un usuario"""
+def login_user_cli(mediator):
+    """Inicia sesión en modo CLI"""
     print("\n--- LOGIN ---")
     
     username = input("Nombre de usuario: ").strip()
@@ -95,8 +138,8 @@ def login_user(mediator: AppMediator):
         print(f"❌ {message}")
 
 
-def list_users(mediator: AppMediator):
-    """Lista todos los usuarios registrados"""
+def list_users_cli(mediator):
+    """Lista todos los usuarios en modo CLI"""
     print("\n--- LISTA DE USUARIOS ---")
     
     users = mediator.user_repository.find_all()
@@ -109,6 +152,26 @@ def list_users(mediator: AppMediator):
     for user in users:
         print(f"  ID: {user.id} | Usuario: {user.username:<15} | " + 
               f"Email: {user.email:<25} | Rol: {user.role}")
+
+
+def main():
+    """
+    Función principal
+    Detecta si PyQt6 está disponible para usar GUI
+    Si no, ejecuta el modo CLI
+    """
+    print("=" * 60)
+    print("🚀 Gestor de Pedidos - Inicialización")
+    print("=" * 60)
+    
+    # Verificar si PyQt6 está disponible
+    try:
+        import PyQt6
+        print("✅ PyQt6 disponible - Modo GUI activado\n")
+        run_gui()
+    except ImportError:
+        print("⚠️  PyQt6 no disponible - Usando modo CLI\n")
+        run_cli()
 
 
 if __name__ == "__main__":
