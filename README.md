@@ -48,6 +48,63 @@ DAE2026/
 └── data/orders.db         # Base de datos
 ```
 
+### Capas de la Aplicación
+
+- **database/** - Capa de acceso a datos
+  - Conexión a SQLite
+  - Definición de modelos (User, Order)
+  
+- **repositories/** - Patrones de acceso a datos
+  - Implementa CRUD para cada entidad
+  - UserRepository, OrderRepository
+  
+- **services/** - Lógica de negocio
+  - AuthService: Autenticación y validaciones
+  - UserService: Operaciones con usuarios
+  - OrderService: Operaciones con pedidos
+  
+- **gui/** - Interfaz gráfica
+  - main_window.py: Ventana principal
+  - login_window.py: Login y registro
+  - styles.py: Estilos CSS oscuros
+  
+- **mediator/** - Coordinador de capas
+  - Inyección de dependencias
+  - Coordinación entre componentes
+  
+- **utils/** - Utilidades generales
+  - Validadores de entrada
+  - Funciones de seguridad
+  - Constantes de la aplicación
+
+## 📋 Procedimiento de Registro
+
+1. Ejecuta: `python main.py`
+2. Haz click en el botón **"Registrarse"**
+3. Completa los campos:
+   - **Nombre de usuario**: Mínimo 3 caracteres (letras, números, guiones)
+   - **Correo electrónico**: Email válido
+   - **Contraseña**: Mínimo 6 caracteres
+   - **Tipo de usuario**: 
+     - Cliente (acceso básico - recomendado)
+     - Gerente (acceso intermedio - por seguridad se convierte a Cliente)
+     - Admin (acceso total - por seguridad se convierte a Cliente)
+4. Click en **"Registrarse"**
+5. Se confirmará si fue exitoso
+
+**Nota**: Por seguridad, nuevos registros se crean como Cliente. Solo Admin puede cambiar roles después.
+
+## 📋 Procedimiento de Login
+
+1. Ejecuta: `python main.py`
+2. Ingresa tu **nombre de usuario**
+3. Ingresa tu **contraseña**
+4. Click en **"Iniciar Sesión"**
+5. Si las credenciales son correctas:
+   - Se abre el panel principal
+   - Se muestra tu rol y permisos
+   - Puedes navegar por las pestañas
+
 ## 🎨 Tema
 
 - Fondo oscuro: `#1e1e1e`
