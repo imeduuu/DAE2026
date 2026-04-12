@@ -1,0 +1,27 @@
+# Proyecto: Gestor de Pedidos
+# Ignorar archivos de base de datos
+data/*.db
+
+# Ignorar archivos de Python compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ignorar ambientes virtuales
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
