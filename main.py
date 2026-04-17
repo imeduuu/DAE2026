@@ -47,11 +47,21 @@ def run_gui():
         sys.exit(1)
 
 
+from mediator.app_mediator import AppMediator
+from utils.constants import (
+    ROLE_ADMIN,
+    ROLE_CLIENT,
+    ROLE_MANAGER,
+    ORDER_STATUS_PENDING,
+    ORDER_STATUS_CONFIRMED,
+    ORDER_STATUS_SHIPPED,
+    ORDER_STATUS_DELIVERED,
+    ORDER_STATUS_CANCELLED,
+)
+
+
 def run_cli():
     """Ejecuta la aplicación en modo consola (CLI)"""
-    from mediator.app_mediator import AppMediator
-    from utils.constants import ROLE_ADMIN, ROLE_CLIENT
-    
     print("=" * 60)
     print("Gestor de Pedidos - Modo Consola")
     print("=" * 60)
@@ -134,6 +144,90 @@ def login_user_cli(mediator):
         print(f"\n  Bienvenido {user.username}!")
         print(f"  Rol: {user.role}")
         print(f"  Email: {user.email}")
+        user_dashboard_cli(mediator, user)
+    else:
+        print(f"❌ {message}")
+
+
+def user_dashboard_cli(mediator, user):
+    """Muestra el menú de usuario después del login"""
+    while True:
+        print("\n--- MENÚ DE USUARIO ---")
+        print("1. Crear nuevo pedido")
+        print("2. Ver mis pedidos")
+        if user.role in [ROLE_ADMIN, ROLE_MANAGER]:
+            print("3. Ver todos los pedidos")
+            print("4. Cambiar estado de pedido")
+            print("5. Cerrar sesión")
+        else:
+            print("3. Cerrar sesión")
+
+        opcion = input("Seleccione una opción: ").strip()
+
+        if opcion == "1":
+            create_order_cli(mediator, user)
+        elif opcion == "2":
+            list_orders_cli(mediator, user)
+        elif opcion == "3" and user.role in [ROLE_ADMIN, ROLE_MANAGER]:
+            list_all_orders_cli(mediator)
+        elif opcion == "4" and user.role in [ROLE_ADMIN, ROLE_MANAGER]:
+            change_order_status_cli(mediator)
+        elif opcion == "5" and user.role in [ROLE_ADMIN, ROLE_MANAGER]:
+            print("Cerrando sesión...")
+            break
+        elif opcion == "3" and user.role not in [ROLE_ADMIN, ROLE_MANAGER]:
+            print("Cerrando sesión...")
+            break
+        else:
+            print("Opción no válida")
+
+
+def create_order_cli(mediator, user):
+    """Crea un pedido desde la línea de comandos"""
+    print("\n--- CREAR PEDIDO ---")
+    description = input("Descripción del pedido: ").strip()
+    success, message, order = mediator.order_service.create_order(user.id, description)
+    if success:
+        print(f"✓ {message}")
+        print(f"  Pedido ID: {order.id}")
+        print(f"  Estado: {order.status}")
+    else:
+        print(f"❌ {message}")
+
+
+def list_orders_cli(mediator, user):
+    """Lista los pedidos del usuario"""
+    print("\n--- MIS PEDIDOS ---")
+    orders = mediator.order_service.get_user_orders(user.id, user.role)
+    if not orders:
+        print("No hay pedidos registrados")
+        return
+    for order in orders:
+        print(f"  ID: {order.id} | Usuario ID: {order.user_id} | Estado: {order.status} | Descripción: {order.description}")
+
+
+def list_all_orders_cli(mediator):
+    """Lista todos los pedidos (admin)"""
+    print("\n--- TODOS LOS PEDIDOS ---")
+    orders = mediator.order_service.get_user_orders(0, ROLE_ADMIN)
+    if not orders:
+        print("No hay pedidos registrados")
+        return
+    for order in orders:
+        print(f"  ID: {order.id} | Usuario ID: {order.user_id} | Estado: {order.status} | Descripción: {order.description}")
+
+
+def change_order_status_cli(mediator):
+    """Permite actualizar el estado de un pedido desde CLI"""
+    print("\n--- ACTUALIZAR ESTADO DE PEDIDO ---")
+    order_id = input("ID del pedido: ").strip()
+    new_status = input(f"Nuevo estado ({ORDER_STATUS_PENDING}, {ORDER_STATUS_CONFIRMED}, {ORDER_STATUS_SHIPPED}, {ORDER_STATUS_DELIVERED}, {ORDER_STATUS_CANCELLED}): ").strip()
+    if not order_id.isdigit():
+        print("ID inválido")
+        return
+    success, message = mediator.order_service.update_order_status(int(order_id), new_status)
+    if success:
+        print(f"✓ {message}")
     else:
         print(f"❌ {message}")
 
