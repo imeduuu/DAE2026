@@ -108,11 +108,24 @@ UPDATE users SET role = 'administrador' WHERE username = 'juan';
 UPDATE users SET role = 'cliente' WHERE username = 'juan';
 ```
 
-### Opción 3: Desde Panel Admin (GUI)
-*Próximamente*
-- Sección "Gestión de Roles"
-- Búsqueda de usuario
-- Cambio de rol con confirmación
+### Opción 3: Desde Panel Admin (GUI) ✅ IMPLEMENTADO
+Ahora disponible en la pestaña "⚙️ Gestión de Roles":
+
+**Pasos:**
+1. Inicia sesión como Administrador
+2. En la barra de navegación, haz click en "⚙️ Gestión de Roles"
+3. Verás una tabla con todos los usuarios (ID, Usuario, Email, Rol, Fecha)
+4. Usar la búsqueda para filtrar por usuario, email o rol
+5. Click en "Cambiar Rol" para seleccionar el nuevo rol
+6. Confirmar el cambio (se solicita confirmación adicional)
+7. Se registra automáticamente en logs (data/audit.log)
+
+**Validaciones de Seguridad:**
+- ✅ No puedes cambiar tu propio rol
+- ✅ No se puede dejar sin Administrador (mínimo 1 activo)
+- ✅ Se confirma antes de aplicar cambios
+- ✅ Se registra en auditoría quién cambió qué rol y cuándo
+- ✅ Campo opcional de motivo del cambio
 
 ---
 

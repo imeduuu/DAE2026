@@ -51,11 +51,15 @@ class MainWindow(QMainWindow):
         # Vista de usuarios solo para Admin y Gerente
         from utils.constants import ROLE_ADMIN, ROLE_MANAGER
         self.users_view = self.create_users_view() if self.current_user.role in [ROLE_ADMIN, ROLE_MANAGER] else None
+        # Vista de gestión de roles solo para Admin
+        self.roles_management_view = self.create_roles_management_view() if self.current_user.role == ROLE_ADMIN else None
         
         self.stacked.addWidget(self.dashboard_view)
         self.stacked.addWidget(self.orders_view)
         if self.users_view:
             self.stacked.addWidget(self.users_view)
+        if self.roles_management_view:
+            self.stacked.addWidget(self.roles_management_view)
         
         # Barra superior (DESPUÉS de crear las vistas)
         header = self.create_header()
@@ -104,6 +108,11 @@ class MainWindow(QMainWindow):
             users_btn = QPushButton("👥 Usuarios")
             users_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.users_view))
             nav_layout.addWidget(users_btn)
+        
+        if self.roles_management_view:
+            roles_btn = QPushButton("⚙️ Gestión de Roles")
+            roles_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.roles_management_view))
+            nav_layout.addWidget(roles_btn)
         
         logout_btn = QPushButton("🚪 Salir")
         logout_btn.setObjectName("dangerBtn")
@@ -346,6 +355,150 @@ class MainWindow(QMainWindow):
             self.users_table.setItem(row, 3, QTableWidgetItem(user.role))
             self.users_table.setItem(row, 4, QTableWidgetItem(str(user.created_at)[:10] if user.created_at else "-"))
 
+    def create_roles_management_view(self):
+        """Crea la vista de gestión de roles (solo para admin)"""
+        from utils.constants import ROLE_ADMIN
+        
+        widget = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = QLabel("⚙️ Gestión de Roles")
+        title_font = QFont()
+        title_font.setPointSize(14)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
+
+        # Descripción
+        desc = QLabel("Administra los roles y permisos de los usuarios del sistema")
+        desc_font = QFont()
+        desc_font.setPointSize(9)
+        desc_font.setItalic(True)
+        desc.setFont(desc_font)
+        layout.addWidget(desc)
+
+        layout.addSpacing(10)
+
+        # Barra de búsqueda
+        search_layout = QHBoxLayout()
+        search_label = QLabel("🔍 Buscar usuario:")
+        search_layout.addWidget(search_label)
+        
+        self.roles_search_input = QLineEdit()
+        self.roles_search_input.setPlaceholderText("Usuario, Email o Rol...")
+        self.roles_search_input.textChanged.connect(self.filter_roles_table)
+        search_layout.addWidget(self.roles_search_input)
+        search_layout.addSpacing(10)
+
+        clear_search_btn = QPushButton("✕ Limpiar")
+        clear_search_btn.setMaximumWidth(100)
+        clear_search_btn.clicked.connect(lambda: self.roles_search_input.clear())
+        search_layout.addWidget(clear_search_btn)
+
+        layout.addLayout(search_layout)
+        layout.addSpacing(10)
+
+        # Tabla de roles
+        self.roles_table = QTableWidget()
+        self.roles_table.setColumnCount(6)
+        self.roles_table.setHorizontalHeaderLabels([
+            "ID", "Usuario", "Email", "Rol Actual", "Creado", "Acciones"
+        ])
+
+        header = self.roles_table.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+
+        self.refresh_roles_table()
+        layout.addWidget(self.roles_table)
+
+        # Botones de acción
+        buttons_layout = QHBoxLayout()
+
+        refresh_btn = QPushButton("🔄 Actualizar")
+        refresh_btn.clicked.connect(self.refresh_roles_table)
+        buttons_layout.addWidget(refresh_btn)
+
+        buttons_layout.addStretch()
+
+        layout.addLayout(buttons_layout)
+
+        widget.setLayout(layout)
+        return widget
+
+    def refresh_roles_table(self):
+        """Actualiza la tabla de gestión de roles"""
+        from utils.constants import ROLES
+        
+        users = self.mediator.user_repository.find_all()
+        self.roles_table.setRowCount(len(users))
+
+        for row, user in enumerate(users):
+            self.roles_table.setItem(row, 0, QTableWidgetItem(str(user.id)))
+            self.roles_table.setItem(row, 1, QTableWidgetItem(user.username))
+            self.roles_table.setItem(row, 2, QTableWidgetItem(user.email))
+            self.roles_table.setItem(row, 3, QTableWidgetItem(ROLES.get(user.role, user.role)))
+            self.roles_table.setItem(row, 4, QTableWidgetItem(str(user.created_at)[:10] if user.created_at else "-"))
+
+            # Botón de cambiar rol
+            action_widget = QWidget()
+            action_layout = QHBoxLayout()
+            action_layout.setContentsMargins(0, 0, 0, 0)
+
+            change_role_btn = QPushButton("Cambiar Rol")
+            change_role_btn.setObjectName("secondaryBtn")
+            change_role_btn.clicked.connect(
+                lambda checked, user_id=user.id: self.show_role_change_dialog(user_id)
+            )
+            action_layout.addWidget(change_role_btn)
+            action_layout.addStretch()
+
+            action_widget.setLayout(action_layout)
+            self.roles_table.setCellWidget(row, 5, action_widget)
+
+    def filter_roles_table(self):
+        """Filtra la tabla de roles según la búsqueda"""
+        search_text = self.roles_search_input.text().lower()
+
+        for row in range(self.roles_table.rowCount()):
+            # Obtener datos de la fila
+            username = self.roles_table.item(row, 1).text() if self.roles_table.item(row, 1) else ""
+            email = self.roles_table.item(row, 2).text() if self.roles_table.item(row, 2) else ""
+            role = self.roles_table.item(row, 3).text() if self.roles_table.item(row, 3) else ""
+
+            # Mostrar o ocultar fila según búsqueda
+            match = (search_text in username.lower() or 
+                    search_text in email.lower() or 
+                    search_text in role.lower())
+            self.roles_table.setRowHidden(row, not match)
+
+    def show_role_change_dialog(self, user_id: int):
+        """Muestra el diálogo para cambiar el rol de un usuario"""
+        from utils.constants import ROLE_ADMIN
+        
+        user = self.mediator.user_repository.find_by_id(user_id)
+        if not user:
+            QMessageBox.critical(self, "Error", "Usuario no encontrado")
+            return
+
+        # Validación de seguridad
+        if user_id == self.current_user.id:
+            QMessageBox.warning(
+                self, 
+                "No permitido",
+                "No puedes cambiar tu propio rol"
+            )
+            return
+
+        dialog = RoleChangeDialog(self.mediator, user, self.current_user, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.refresh_roles_table()
+            # Si el usuario actual perdió permisos, refrescar la sesión
+            updated_user = self.mediator.user_repository.find_by_id(self.current_user.id)
+            if updated_user:
+                self.current_user = updated_user
+
     def show_new_order_dialog(self):
         """Muestra el diálogo para crear un nuevo pedido"""
         dialog = NewOrderDialog(self.current_user, self.mediator, self)
@@ -484,3 +637,128 @@ class UpdateStatusDialog(QDialog):
             self.accept()
         else:
             QMessageBox.warning(self, "Error", message)
+
+
+class RoleChangeDialog(QDialog):
+    """Diálogo para cambiar el rol de un usuario"""
+
+    def __init__(self, mediator, user, current_user, parent=None):
+        super().__init__(parent)
+        self.mediator = mediator
+        self.user = user
+        self.current_user = current_user
+        self._setup_ui()
+
+    def _setup_ui(self):
+        from utils.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_CLIENT, ROLES
+        
+        self.setWindowTitle(f"Cambiar rol - {self.user.username}")
+        self.setModal(True)
+        self.setFixedSize(600, 350)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Información del usuario
+        title = QLabel(f"Cambiar rol de: {self.user.username}")
+        title_font = QFont()
+        title_font.setPointSize(12)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
+
+        layout.addSpacing(10)
+
+        # Información actual
+        info_layout = QHBoxLayout()
+        email_label = QLabel(f"📧 {self.user.email}")
+        info_layout.addWidget(email_label)
+        role_label = QLabel(f"👤 Rol actual: {ROLES.get(self.user.role, self.user.role)}")
+        info_label = QLabel(f"ID: {self.user.id}")
+        info_layout.addWidget(role_label)
+        info_layout.addWidget(info_label)
+        info_layout.addStretch()
+        layout.addLayout(info_layout)
+
+        layout.addSpacing(15)
+
+        # Combinador de roles
+        role_label = QLabel("Nuevo rol:")
+        layout.addWidget(role_label)
+
+        self.role_combo = QComboBox()
+        self.role_combo.addItem(ROLES[ROLE_ADMIN], ROLE_ADMIN)
+        self.role_combo.addItem(ROLES[ROLE_MANAGER], ROLE_MANAGER)
+        self.role_combo.addItem(ROLES[ROLE_CLIENT], ROLE_CLIENT)
+        self.role_combo.setCurrentText(ROLES.get(self.user.role, self.user.role))
+        layout.addWidget(self.role_combo)
+
+        # Campo de motivo
+        layout.addSpacing(10)
+        reason_label = QLabel("Motivo del cambio (opcional):")
+        layout.addWidget(reason_label)
+
+        self.reason_input = QTextEdit()
+        self.reason_input.setPlaceholderText("Ingresa el motivo del cambio...")
+        self.reason_input.setMaximumHeight(80)
+        layout.addWidget(self.reason_input)
+
+        # Área de advertencia
+        layout.addSpacing(10)
+        warning_label = QLabel("⚠️ Esta acción cambiará los permisos del usuario.")
+        warning_font = QFont()
+        warning_font.setPointSize(9)
+        warning_font.setItalic(True)
+        warning_label.setFont(warning_font)
+        layout.addWidget(warning_label)
+
+        layout.addStretch()
+
+        # Botones
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+
+        confirm_btn = QPushButton("✓ Confirmar cambio")
+        confirm_btn.setObjectName("primaryBtn")
+        confirm_btn.clicked.connect(self._confirm_change)
+        buttons_layout.addWidget(confirm_btn)
+
+        cancel_btn = QPushButton("✗ Cancelar")
+        cancel_btn.clicked.connect(self.reject)
+        buttons_layout.addWidget(cancel_btn)
+
+        layout.addLayout(buttons_layout)
+        self.setLayout(layout)
+
+    def _confirm_change(self):
+        from utils.constants import ROLES
+        
+        new_role = self.role_combo.currentData()
+        
+        # Si el nuevo rol es el mismo, no hacer nada
+        if new_role == self.user.role:
+            QMessageBox.information(self, "Sin cambios", "El nuevo rol es igual al actual")
+            return
+
+        # Mostrar confirmación
+        reply = QMessageBox.question(
+            self,
+            "Confirmar cambio de rol",
+            f"¿Confirmar cambio de {ROLES.get(self.user.role)} a {ROLES.get(new_role)}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            reason = self.reason_input.toPlainText().strip()
+            success, message = self.mediator.user_service.change_user_role(
+                self.user.id,
+                new_role,
+                self.current_user.id,
+                reason
+            )
+
+            if success:
+                QMessageBox.information(self, "Éxito", message)
+                self.accept()
+            else:
+                QMessageBox.warning(self, "Error", message)
