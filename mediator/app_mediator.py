@@ -5,6 +5,7 @@ Actúa como coordinador entre las diferentes capas de la aplicación
 from database.connection import DatabaseConnection
 from repositories.user_repository import UserRepository
 from repositories.order_repository import OrderRepository
+from repositories.product_repository import ProductRepository
 from services.auth_service import AuthService
 from services.order_service import OrderService
 from services.user_service import UserService
@@ -26,6 +27,7 @@ class AppMediator:
         # Repositorios
         self.user_repository = UserRepository(self.db_connection)
         self.order_repository = OrderRepository(self.db_connection)
+        self.product_repository = ProductRepository(self.db_connection)
         
         # Servicios
         self.auth_service = AuthService(self.user_repository)

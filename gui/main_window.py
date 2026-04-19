@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QIcon
 from gui.login_window import LoginWindow
+from gui.product_selection_dialog import ProductSelectionDialog
+from database.models import OrderItem
 from utils.constants import ROLE_ADMIN, ORDER_STATUS_PENDING, ORDER_STATUS_CONFIRMED, ORDER_STATUS_SHIPPED, ORDER_STATUS_DELIVERED, ORDER_STATUS_CANCELLED
 
 
@@ -552,55 +554,95 @@ class MainWindow(QMainWindow):
 
 
 class NewOrderDialog(QDialog):
-    """Diálogo para crear un nuevo pedido"""
+    """Diálogo para crear un nuevo pedido con selección de productos"""
 
     def __init__(self, current_user, mediator, parent=None):
         super().__init__(parent)
         self.current_user = current_user
         self.mediator = mediator
         self._setup_ui()
-
+    
     def _setup_ui(self):
-        self.setWindowTitle("Nuevo Pedido")
-        self.setModal(True)
-        self.setFixedSize(500, 320)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-
-        label = QLabel("Describe tu pedido:")
-        layout.addWidget(label)
-
-        self.description_input = QTextEdit()
-        self.description_input.setPlaceholderText("Ingresa los detalles del pedido...")
-        layout.addWidget(self.description_input)
-
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-
-        create_btn = QPushButton("Crear pedido")
-        create_btn.setObjectName("primaryBtn")
-        create_btn.clicked.connect(self._create_order)
-        buttons_layout.addWidget(create_btn)
-
-        cancel_btn = QPushButton("Cancelar")
-        cancel_btn.clicked.connect(self.reject)
-        buttons_layout.addWidget(cancel_btn)
-
-        layout.addLayout(buttons_layout)
-        self.setLayout(layout)
-
-    def _create_order(self):
-        description = self.description_input.toPlainText().strip()
-        success, message, order = self.mediator.order_service.create_order(
-            self.current_user.id,
-            description
-        )
-        if success:
-            QMessageBox.information(self, "Pedido creado", message)
-            self.accept()
+        """Abre el diálogo de selección de productos"""
+        # Obtener árbol de productos
+        products_tree = self.mediator.product_repository.get_products_tree()
+        
+        if not products_tree:
+            QMessageBox.warning(self, "Sin Productos", "No hay productos disponibles en el catálogo")
+            self.reject()
+            return
+        
+        # Mostrar diálogo de selección
+        product_selection = ProductSelectionDialog(products_tree, self)
+        
+        if product_selection.exec() == QDialog.DialogCode.Accepted:
+            selected_products = product_selection.get_selected_products()
+            
+            if not selected_products:
+                QMessageBox.warning(self, "Carrito Vacío", "Por favor, agrega al menos un producto")
+                self.reject()
+                return
+            
+            # Crear pedido con descripción de productos
+            self._create_order_with_products(selected_products)
         else:
-            QMessageBox.warning(self, "Error", message)
+            self.reject()
+    
+    def _create_order_with_products(self, selected_products: dict):
+        """
+        Crea un pedido con los productos seleccionados
+        
+        Args:
+            selected_products: Diccionario {product_id: {name, price, quantity}}
+        """
+        try:
+            # Crear descripción del pedido con los productos
+            product_descriptions = []
+            for product_id, product_info in selected_products.items():
+                product_descriptions.append(
+                    f"{product_info['quantity']}x {product_info['name']} ({product_info['model']})"
+                )
+            description = " | ".join(product_descriptions)
+            
+            # Crear pedido
+            success, message, order = self.mediator.order_service.create_order(
+                self.current_user.id,
+                description
+            )
+            
+            if not success:
+                QMessageBox.warning(self, "Error", message)
+                self.reject()
+                return
+            
+            # Agregar items al pedido
+            for product_id, product_info in selected_products.items():
+                order_item = OrderItem(
+                    order_id=order.id,
+                    product_id=product_id,
+                    quantity=product_info['quantity'],
+                    unit_price=product_info['price']
+                )
+                self.mediator.product_repository.create_order_item(order_item)
+            
+            # Mostrar confirmación
+            total_price = sum(
+                p['price'] * p['quantity'] 
+                for p in selected_products.values()
+            )
+            
+            message = (
+                f"✓ Pedido creado exitosamente\n\n"
+                f"ID: {order.id}\n"
+                f"Total: ${total_price:.2f}\n"
+                f"Estado: {order.status}"
+            )
+            QMessageBox.information(self, "Pedido Creado", message)
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al crear pedido: {str(e)}")
+            self.reject()
 
 
 class UpdateStatusDialog(QDialog):
