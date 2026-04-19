@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QMessageBox, QStackedWidget,
                              QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView,
                              QDialog, QLineEdit, QTextEdit, QComboBox)
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QIcon
 from gui.login_window import LoginWindow
 from utils.constants import ROLE_ADMIN, ORDER_STATUS_PENDING, ORDER_STATUS_CONFIRMED, ORDER_STATUS_SHIPPED, ORDER_STATUS_DELIVERED, ORDER_STATUS_CANCELLED
@@ -69,6 +69,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stacked)
         
         central_widget.setLayout(layout)
+        
+        # Iniciar timer para transiciones automáticas de pedidos
+        self._start_order_transition_timer()
+        
         self.show()
     
     def create_header(self):
@@ -517,6 +521,24 @@ class MainWindow(QMainWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.refresh_orders_table()
             self.refresh_dashboard_stats()
+
+    def _start_order_transition_timer(self):
+        """Inicia el timer para procesar transiciones automáticas de pedidos"""
+        self.order_transition_timer = QTimer()
+        # Ejecutar cada 30 segundos (30,000 ms)
+        self.order_transition_timer.timeout.connect(self._process_order_transitions)
+        self.order_transition_timer.start(30000)
+
+    def _process_order_transitions(self):
+        """Procesa las transiciones automáticas de pedidos"""
+        try:
+            transitions = self.mediator.order_service.process_automatic_transitions()
+            if transitions > 0:
+                # Si hay cambios, actualizar las tablas visibles
+                self.refresh_orders_table()
+                self.refresh_dashboard_stats()
+        except Exception as e:
+            print(f"Error procesando transiciones: {e}")
 
     def do_logout(self):
         """Realiza el logout"""
